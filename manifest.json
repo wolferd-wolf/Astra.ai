@@ -1,0 +1,34 @@
+{
+
+Export
+
+"name": "Aura Edge LLM Studio",
+
+"short_name": "Aura",
+
+"description": "Private, on-device Al workspace running sub-1B models directly in your browser with WebGPU.",
+
+"start_url":"/index.html",
+
+"display": "standalone",
+
+"background_color": "#OCOB08",
+
+"theme_color": "#OCOB08",
+
+"orientation": "any",
+
+"icans":[
+
+{
+
+"src": "data:image/svg+xml,a",
+
+"sizes": "192x192 512x512",
+
+"type": "image/svg+xml",
+
+"purpose": "any maskable"
+}
+]
+}
