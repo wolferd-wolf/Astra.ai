@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <title>Astra AI — Edge LLM Studio</title>
+  
+  <!-- Tailwind CSS Engine CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            sand: {
+              50: '#FAF8F5', 100: '#F4EFE6', 200: '#E8E1D3', 300: '#D6CCB9',
+              400: '#B8AA90', 500: '#9A8A6E', 600: '#756850', 700: '#524836',
+              800: '#2A251B', 850: '#1D1912', 900: '#14120D', 950: '#0C0A07',
+            },
+            terracotta: {
+              400: '#E27D60', 500: '#D96B47', 600: '#BF5330', 700: '#993E20',
+            }
+          },
+          fontFamily: {
+            serif: ['Newsreader', 'Georgia', 'serif'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Typography & Syntax Highlighting -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+
+  <style>
+    /* Viewport Safety */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Point Square Matrix Loader (3x3 Grid) */
+    .point-square-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 4px);
+      grid-gap: 3px;
+      width: 18px;
+      height: 18px;
+      place-items: center;
+    }
+    .point-square-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 1px;
+      background-color: #D96B47;
+      animation: pointPulse 1.2s ease-in-out infinite;
+      animation-delay: calc(var(--d) * 0.12s);
+    }
+    @keyframes pointPulse {
+      0%, 100% { opacity: 0.25; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); background-color: #E27D60; }
+    }
+
+    /* Animated Micro Download Icon */
+    .micro-download-icon .download-arrow {
+      transition: transform 0.2s ease;
+    }
+    .micro-download-animating .download-arrow {
+      animation: microArrowBounce 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .micro-download-animating .download-tray {
+      animation: microTrayPulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes microArrowBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(3px); }
+    }
+    @keyframes microTrayPulse {
+      0% { opacity: 0.6; transform: scaleX(0.95); }
+      100% { opacity: 1; transform: scaleX(1); }
+    }
+
+    /* Markdown Styling */
+    .assistant-markdown p { margin-bottom: 0.75rem; line-height: 1.6; }
+    .assistant-markdown p:last-child { margin-bottom: 0; }
+    .assistant-markdown ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.75rem; }
+    .assistant-markdown ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.75rem; }
+    .assistant-markdown li { margin-bottom: 0.25rem; }
+    .assistant-markdown code:not(pre code) {
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0.15rem 0.35rem;
+      border-radius: 0.25rem;
+      font-size: 0.85em;
+    }
+    .dark .assistant-markdown code:not(pre code) {
+      background-color: rgba(220, 212, 192, 0.1);
+      color: #E27D60;
+    }
+    html:not(.dark) .assistant-markdown code:not(pre code) {
+      background-color: rgba(120, 100, 70, 0.1);
+      color: #BF5330;
+    }
+    .assistant-markdown pre {
+      margin: 0.75rem 0;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .dark .assistant-markdown pre {
+      background-color: #14120D !important;
+      border: 1px solid rgba(164, 150, 117, 0.15);
+    }
+    html:not(.dark) .assistant-markdown pre {
+      background-color: #F4EFE6 !important;
+      border: 1px solid rgba(82, 72, 54, 0.15);
+    }
+    .assistant-markdown pre code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      background: transparent !important;
+      padding: 0 !important;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(164, 150, 117, 0.2); border-radius: 4px; }
+  </style>
+</head>
+
+<body class="font-sans antialiased flex flex-col h-[100dvh] w-full bg-sand-50 dark:bg-sand-950 text-sand-900 dark:text-sand-100 transition-colors duration-200">
+
+  <!-- Mobile Backdrop -->
+  <div id="mobile-backdrop" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden transition-opacity"></div>
+  
+  <div class="flex flex-1 h-full overflow-hidden relative">
+    
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-sand-100 dark:bg-sand-900 border-r border-sand-200 dark:border-sand-800/80 flex flex-col transition-transform duration-200 -translate-x-full md:relative md:translate-x-0">
+      <div class="p-4 border-b border-sand-200 dark:border-sand-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-6 h-6 rounded bg-terracotta-500/10 border border-terracotta-500/30 flex items-center justify-center text-terracotta-500 font-serif font-bold text-sm">A</div>
+          <span class="font-serif italic font-medium tracking-wide text-sand-900 dark:text-sand-100">Astra AI</span>
+        </div>
+        <button id="close-sidebar-btn" class="md:hidden text-sand-500 hover:text-sand-700 dark:text-sand-400 dark:hover:text-sand-200 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- New Chat Button -->
+      <div class="p-3">
+        <button id="new-chat-btn" class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-sand-200/60 dark:bg-sand-850 hover:bg-sand-200 dark:hover:bg-sand-800 border border-sand-300/60 dark:border-sand-800 text-sm text-sand-800 dark:text-sand-200 transition">
+          <span class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-terracotta-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>New Session</span>
+          </span>
+          <kbd class="text-[10px] font-mono bg-sand-100 dark:bg-sand-900 text-sand-500 px-1.5 py-0.5 rounded border border-sand-300 dark:border-sand-800">⌘K</kbd>
+        </button>
+      </div>
+
+      <!-- History List -->
+      <div class="flex-1 overflow-y-auto px-2 space-y-1" id="chat-history-list"></div>
+
+      <!-- Sidebar Footer: Theme Toggle & Settings Button -->
+      <div class="p-3 border-t border-sand-200 dark:border-sand-800/80 bg-sand-100/60 dark:bg-sand-900/60 flex items-center justify-between gap-2">
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle-btn" class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-sand-300 dark:border-sand-800 bg-sand-50 dark:bg-sand-850 hover:bg-sand-200/60 dark:hover:bg-sand-800 text-xs text-sand-700 dark:text-sand-300 font-medium transition">
+          <!-- Sun Icon (visible in dark mode) -->
+          <svg id="theme-sun-icon" class="w-4 h-4 text-amber-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <!-- Moon Icon (visible in light mode) -->
+          <svg id="theme-moon-icon" class="w-4 h-4 text-sand-600 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+          <span id="theme-text">Theme</span>
+        </button>
+
+        <!-- Settings Button (Opens Engine Telemetry Modal) -->
+        <button id="open-settings-btn" title="Engine & Device Settings" class="flex items-center justify-center p-2 rounded-lg border border-sand-300 dark:border-sand-800 bg-sand-50 dark:bg-sand-850 hover:bg-sand-200/60 dark:hover:bg-sand-800 text-sand-700 dark:text-sand-300 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col h-full bg-sand-50 dark:bg-sand-950 relative min-w-0 transition-colors duration-200">
+      
+      <!-- Top Navigation Bar -->
+      <header class="h-14 min-h-[3.5rem] border-b border-sand-200 dark:border-sand-850/80 px-4 flex items-center justify-between bg-sand-50/90 dark:bg-sand-950/90 backdrop-blur z-20">
+        <div class="flex items-center gap-3">
+          <button id="open-sidebar-btn" class="md:hidden text-sand-600 dark:text-sand-400 hover:text-sand-900 dark:hover:text-sand-200 p-1.5 rounded-lg active:bg-sand-200 dark:active:bg-sand-900">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+          </button>
+
+          <!-- Model Switcher Dropdown -->
+          <div class="relative">
+            <button id="model-select-btn" class="flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-sand-200/60 dark:hover:bg-sand-900 border border-sand-300 dark:border-sand-800/80 text-xs font-mono text-sand-800 dark:text-sand-200 transition">
+              <span id="current-model-name">Qwen2.5 0.5B</span>
+              <svg class="w-3.5 h-3.5 text-sand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+
+            <div id="model-dropdown" class="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-sand-900 border border-sand-200 dark:border-sand-800 rounded-lg shadow-xl py-1.5 hidden z-50">
+              <button class="model-opt w-full text-left px-3 py-2 text-xs hover:bg-sand-100 dark:hover:bg-sand-850 flex items-center justify-between" data-id="onnx-community/Qwen2.5-0.5B-Instruct" data-name="Qwen2.5 0.5B">
+                <span class="font-medium text-sand-800 dark:text-sand-200">Qwen2.5 0.5B</span>
+                <span class="text-[10px] text-sand-400 font-mono">350MB</span>
+              </button>
+              <button class="model-opt w-full text-left px-3 py-2 text-xs hover:bg-sand-100 dark:hover:bg-sand-850 flex items-center justify-between" data-id="onnx-community/SmolLM2-135M-ONNX" data-name="SmolLM2 135M">
+                <span class="font-medium text-sand-800 dark:text-sand-200">SmolLM2 135M</span>
+                <span class="text-[10px] text-sand-400 font-mono">90MB</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Download / Export Chat Option (React Micro-Interaction Icon) -->
+          <button id="export-chat-btn" title="Download Conversation as Markdown" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-sand-200/60 dark:hover:bg-sand-900 text-sand-600 dark:text-sand-400 hover:text-sand-900 dark:hover:text-sand-200 text-xs font-mono transition">
+            <svg class="micro-download-icon w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path class="download-arrow" d="M12 3v12M7 10l5 5 5-5"/>
+              <path class="download-tray" d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+            </svg>
+            <span class="hidden sm:inline">Export</span>
+          </button>
+
+          <!-- Status Indicator Pill -->
+          <div id="status-pill" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sand-200/60 dark:bg-sand-900 border border-sand-300 dark:border-sand-800 text-[11px] font-mono text-sand-600 dark:text-sand-400">
+            <span class="w-2 h-2 rounded-full bg-sand-500" id="status-light"></span>
+            <span id="status-text">Standby</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Model Download Progress Banner with Micro Animated Download Icon -->
+      <div id="download-progress-bar" class="hidden px-4 py-2.5 bg-sand-100/95 dark:bg-sand-900/95 border-b border-sand-200 dark:border-sand-800 backdrop-blur z-10">
+        <div class="flex justify-between items-center text-xs mb-1.5">
+          <div class="flex items-center gap-2 text-sand-800 dark:text-sand-200 font-medium truncate max-w-[75%]">
+            <svg class="micro-download-icon micro-download-animating w-3.5 h-3.5 text-terracotta-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path class="download-arrow" d="M12 3v12M7 10l5 5 5-5"/>
+              <path class="download-tray" d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+            </svg>
+            <span id="download-file-name" class="truncate font-mono text-xs">Downloading Model Weights...</span>
+          </div>
+          <span class="text-terracotta-500 font-mono text-[11px]" id="download-percent">0%</span>
+        </div>
+        <div class="w-full bg-sand-200 dark:bg-sand-800 h-1.5 rounded-full overflow-hidden">
+          <div id="progress-fill" class="bg-terracotta-500 h-full w-0 transition-all duration-150"></div>
+        </div>
+      </div>
+
+      <!-- Messages Scroll Area -->
+      <div id="chat-scroll" class="flex-1 overflow-y-auto px-4 md:px-8 py-5 space-y-5">
+        <!-- Clean, Minimalist Welcome Screen -->
+        <div id="welcome-view" class="max-w-2xl mx-auto my-auto pt-24 pb-12 text-center flex flex-col items-center justify-center">
+          <h1 class="font-serif italic text-3xl md:text-4xl text-sand-900 dark:text-sand-100 font-normal tracking-tight" id="greeting-title">
+            Good day. What are you working on?
+          </h1>
+        </div>
+
+        <!-- Chat Container -->
+        <div id="messages-container" class="max-w-3xl mx-auto space-y-5 hidden pb-4"></div>
+      </div>
+
+      <!-- Floating Prompt Bar -->
+      <footer class="p-3 md:p-5 bg-sand-50/95 dark:bg-sand-950/95 border-t border-sand-200 dark:border-sand-850/60">
+        <div class="max-w-3xl mx-auto relative bg-white dark:bg-sand-900/90 rounded-xl border border-sand-300 dark:border-sand-800 p-2 focus-within:border-terracotta-500/50 shadow-sm transition">
+          <textarea
+            id="prompt-input"
+            rows="1"
+            placeholder="Send a prompt..."
+            class="w-full bg-transparent border-0 resize-none text-sand-900 dark:text-sand-100 placeholder-sand-400 dark:placeholder-sand-500 text-sm focus:outline-none px-2 py-1 max-h-32 overflow-y-auto"
+          ></textarea>
+
+          <div class="flex items-center justify-between pt-1.5 px-1 border-t border-sand-200 dark:border-sand-800/40">
+            <div class="flex items-center gap-1.5">
+              <span id="speed-meter" class="text-[11px] font-mono text-sand-500">0.0 tok/s</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="send-btn" class="w-8 h-8 rounded-lg bg-terracotta-500 hover:bg-terracotta-600 disabled:opacity-40 disabled:hover:bg-terracotta-500 flex items-center justify-center text-white transition active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Settings Modal (Engine & Cache Status) -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-sand-900 border border-sand-300 dark:border-sand-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-sand-200 dark:border-sand-800">
+        <h3 class="font-serif italic text-lg text-sand-900 dark:text-sand-100">Settings & Engine</h3>
+        <button id="close-settings-btn" class="text-sand-400 hover:text-sand-600 dark:hover:text-sand-200 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div class="flex items-center justify-between p-2.5 rounded-lg bg-sand-100 dark:bg-sand-850">
+          <span class="text-sand-600 dark:text-sand-400">Execution Hardware</span>
+          <span id="backend-label" class="font-mono text-xs font-medium text-sand-800 dark:text-sand-200">Probing...</span>
+        </div>
+
+        <div class="flex items-center justify-between p-2.5 rounded-lg bg-sand-100 dark:bg-sand-850">
+          <span class="text-sand-600 dark:text-sand-400">IndexedDB Cache</span>
+          <span id="cache-usage" class="font-mono text-xs text-sand-800 dark:text-sand-200">0 MB</span>
+        </div>
+
+        <div class="p-2.5 rounded-lg bg-sand-100 dark:bg-sand-850 flex items-center justify-between">
+          <span class="text-sand-600 dark:text-sand-400">Clear Saved Weights</span>
+          <button id="clear-cache-btn" class="text-xs font-mono text-terracotta-500 hover:underline">Purge</button>
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <button id="dismiss-settings-btn" class="w-full py-2 rounded-lg bg-sand-200 dark:bg-sand-800 hover:bg-sand-300 dark:hover:bg-sand-700 text-xs font-medium text-sand-800 dark:text-sand-200 transition">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Background Web Worker Code for Transformers.js -->
+  <script id="worker-script" type="text/javascript-worker">
+    import { pipeline, TextStreamer, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0';
+
+    env.useBrowserCache = true;
+    let generator = null;
+    let currentModelId = null;
+
+    self.onmessage = async (e) => {
+      const { type, payload } = e.data;
+
+      if (type === 'load') {
+        const { modelId, device } = payload;
+        currentModelId = modelId;
+
+        try {
+          generator = await pipeline('text-generation', modelId, {
+            device: device,
+            dtype: 'q4',
+            progress_callback: (p) => {
+              self.postMessage({ type: 'progress', progress: p });
+            }
+          });
+          self.postMessage({ type: 'loaded', modelId });
+        } catch (err) {
+          self.postMessage({ type: 'error', error: err.message });
+        }
+      }
+
+      if (type === 'generate') {
+        if (!generator) {
+          self.postMessage({ type: 'error', error: 'Model is not loaded yet.' });
+          return;
+        }
+
+        const { messages, max_new_tokens = 384, temperature = 0.7 } = payload;
+
+        try {
+          const streamer = new TextStreamer(generator.tokenizer, {
+            skip_prompt: true,
+            skip_special_tokens: true,
+            callback_function: (chunk) => {
+              self.postMessage({ type: 'chunk', chunk });
+            }
+          });
+
+          await generator(messages, {
+            max_new_tokens,
+            temperature,
+            do_sample: true,
+            streamer
+          });
+
+          self.postMessage({ type: 'done' });
+        } catch (err) {
+          self.postMessage({ type: 'error', error: err.message });
+        }
+      }
+    };
+  </script>
+
+  <!-- Main Thread Controller -->
+  <script type="module">
+    // Theme Management
+    const htmlEl = document.documentElement;
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const themeText = document.getElementById('theme-text');
+    
+    function updateThemeUI(isDark) {
+      if (isDark) {
+        htmlEl.classList.add('dark');
+        themeText.innerText = "Light Mode";
+      } else {
+        htmlEl.classList.remove('dark');
+        themeText.innerText = "Dark Mode";
+      }
+    }
+
+    const savedTheme = localStorage.getItem('astra_theme');
+    const initialDark = savedTheme ? savedTheme === 'dark' : true;
+    updateThemeUI(initialDark);
+
+    themeToggleBtn.addEventListener('click', () => {
+      const willBeDark = !htmlEl.classList.contains('dark');
+      updateThemeUI(willBeDark);
+      localStorage.setItem('astra_theme', willBeDark ? 'dark' : 'light');
+    });
+
+    // Settings Modal
+    const settingsModal = document.getElementById('settings-modal');
+    const openSettingsBtn = document.getElementById('open-settings-btn');
+    const closeSettingsBtn = document.getElementById('close-settings-btn');
+    const dismissSettingsBtn = document.getElementById('dismiss-settings-btn');
+
+    openSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    dismissSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+    document.getElementById('clear-cache-btn').addEventListener('click', async () => {
+      if (confirm("Clear downloaded model weights from browser storage?")) {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          for (const key of keys) await caches.delete(key);
+        }
+        if (indexedDB && indexedDB.databases) {
+          const dbs = await indexedDB.databases();
+          for (const db of dbs) indexedDB.deleteDatabase(db.name);
+        }
+        alert("Cache cleared. Refresh the page to reload.");
+        location.reload();
+      }
+    });
+
+    // DOM References
+    const chatScroll = document.getElementById('chat-scroll');
+    const welcomeView = document.getElementById('welcome-view');
+    const messagesContainer = document.getElementById('messages-container');
+    const promptInput = document.getElementById('prompt-input');
+    const sendBtn = document.getElementById('send-btn');
+    const statusLight = document.getElementById('status-light');
+    const statusText = document.getElementById('status-text');
+    const downloadProgressBar = document.getElementById('download-progress-bar');
+    const progressFill = document.getElementById('progress-fill');
+    const downloadPercent = document.getElementById('download-percent');
+    const downloadFileName = document.getElementById('download-file-name');
+    const backendLabel = document.getElementById('backend-label');
+    const speedMeter = document.getElementById('speed-meter');
+    const greetingTitle = document.getElementById('greeting-title');
+    const exportChatBtn = document.getElementById('export-chat-btn');
+
+    // Dynamic Diurnal Greeting
+    const hour = new Date().getHours();
+    if (hour < 12) greetingTitle.innerText = "Good morning. What are you working on?";
+    else if (hour < 17) greetingTitle.innerText = "Good afternoon. What are you building?";
+    else greetingTitle.innerText = "Good evening. What's on your mind?";
+
+    // Hardware Detection
+    let executionDevice = 'wasm';
+    if ('gpu' in navigator) {
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (adapter) {
+          executionDevice = 'webgpu';
+          backendLabel.innerText = "WebGPU Accelerated";
+          backendLabel.className = "text-emerald-500 font-mono text-xs font-medium";
+        } else {
+          backendLabel.innerText = "WASM CPU (Fallback)";
+          backendLabel.className = "text-amber-500 font-mono text-xs font-medium";
+        }
+      } catch (e) {
+        backendLabel.innerText = "WASM CPU (Fallback)";
+        backendLabel.className = "text-amber-500 font-mono text-xs font-medium";
+      }
+    } else {
+      backendLabel.innerText = "WASM CPU (Fallback)";
+      backendLabel.className = "text-amber-500 font-mono text-xs font-medium";
+    }
+
+    // Web Worker Initialization
+    const workerBlob = new Blob([document.getElementById('worker-script').textContent], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(workerBlob);
+    const worker = new Worker(workerUrl, { type: 'module' });
+
+    let isGenerating = false;
+    let isModelReady = false;
+    let currentModelId = 'onnx-community/Qwen2.5-0.5B-Instruct';
+
+    let currentResponseTarget = null;
+    let currentLoader = null;
+    let fullResponseAccumulator = "";
+    let tokenCounter = 0;
+    let generationStartTime = 0;
+    let renderScheduled = false;
+
+    // Chat history storage
+    let chatMessages = [];
+
+    // Worker Message Listener
+    worker.onmessage = (e) => {
+      const { type } = e.data;
+
+      if (type === 'progress') {
+        const p = e.data.progress;
+        if (p.status === 'progress') {
+          const pct = Math.round(p.progress || 0);
+          progressFill.style.width = `${pct}%`;
+          downloadPercent.innerText = `${pct}%`;
+          if (p.file) downloadFileName.innerText = `Fetching ${p.file}`;
+        } else if (p.status === 'done') {
+          downloadFileName.innerText = "Initializing runtime...";
+        }
+      }
+
+      if (type === 'loaded') {
+        isModelReady = true;
+        statusLight.className = "w-2 h-2 rounded-full bg-emerald-500";
+        statusText.innerText = "Ready";
+        downloadProgressBar.classList.add('hidden');
+        updateCacheSize();
+      }
+
+      if (type === 'chunk') {
+        fullResponseAccumulator += e.data.chunk;
+        tokenCounter++;
+        
+        // Throttled UI Render
+        if (!renderScheduled) {
+          renderScheduled = true;
+          requestAnimationFrame(() => {
+            if (currentResponseTarget) {
+              currentResponseTarget.innerHTML = marked.parse(fullResponseAccumulator);
+              const elapsed = (performance.now() - generationStartTime) / 1000;
+              if (elapsed > 0) {
+                speedMeter.innerText = `${(tokenCounter / elapsed).toFixed(1)} tok/s`;
+              }
+              chatScroll.scrollTop = chatScroll.scrollHeight;
+            }
+            renderScheduled = false;
+          });
+        }
+      }
+
+      if (type === 'done') {
+        finalizeGeneration();
+      }
+
+      if (type === 'error') {
+        console.error("Worker error:", e.data.error);
+        if (currentResponseTarget) {
+          currentResponseTarget.innerHTML += `<p class="text-terracotta-500 font-mono text-xs mt-2">Error: ${e.data.error}</p>`;
+        }
+        finalizeGeneration();
+        statusLight.className = "w-2 h-2 rounded-full bg-red-500";
+        statusText.innerText = "Error";
+      }
+    };
+
+    function finalizeGeneration() {
+      isGenerating = false;
+      sendBtn.disabled = false;
+      statusText.innerText = "Ready";
+      if (currentLoader) currentLoader.style.display = 'none';
+
+      if (fullResponseAccumulator) {
+        chatMessages.push({ role: 'assistant', content: fullResponseAccumulator });
+      }
+
+      if (currentResponseTarget) {
+        currentResponseTarget.querySelectorAll('pre code').forEach((block) => {
+          hljs.highlightElement(block);
+        });
+      }
+    }
+
+    // Load Model
+    function loadModel(modelId) {
+      isModelReady = false;
+      statusLight.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+      statusText.innerText = "Downloading...";
+      downloadProgressBar.classList.remove('hidden');
+
+      worker.postMessage({
+        type: 'load',
+        payload: { modelId, device: executionDevice }
+      });
+    }
+
+    // Auto-load on boot
+    loadModel(currentModelId);
+
+    // Approximate Cache Storage Size
+    async function updateCacheSize() {
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        const est = await navigator.storage.estimate();
+        const mb = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
+        document.getElementById('cache-usage').innerText = `${mb} MB`;
+      }
+    }
+
+    // Append Message to UI
+    function appendMessage(role, text = "") {
+      welcomeView.classList.add('hidden');
+      messagesContainer.classList.remove('hidden');
+
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `flex flex-col ${role === 'user' ? 'items-end' : 'items-start'} w-full`;
+
+      if (role === 'user') {
+        msgDiv.innerHTML = `
+          <div class="bg-sand-200/80 dark:bg-sand-900 border border-sand-300/80 dark:border-sand-800 text-sand-900 dark:text-sand-100 px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm select-text break-words">
+            ${escapeHtml(text)}
+          </div>
+        `;
+      } else {
+        msgDiv.innerHTML = `
+          <div class="w-full flex items-start gap-3">
+            <div class="point-square-grid mt-1 flex-shrink-0" title="Astra Generating">
+              <div class="point-square-dot" style="--d:1"></div>
+              <div class="point-square-dot" style="--d:2"></div>
+              <div class="point-square-dot" style="--d:3"></div>
+              <div class="point-square-dot" style="--d:2"></div>
+              <div class="point-square-dot" style="--d:3"></div>
+              <div class="point-square-dot" style="--d:4"></div>
+              <div class="point-square-dot" style="--d:3"></div>
+              <div class="point-square-dot" style="--d:4"></div>
+              <div class="point-square-dot" style="--d:5"></div>
+            </div>
+            <div class="flex-1 bg-transparent text-sand-900 dark:text-sand-100 text-sm leading-relaxed assistant-markdown select-text max-w-none break-words">
+              ${marked.parse(text)}
+            </div>
+          </div>
+        `;
+      }
+
+      messagesContainer.appendChild(msgDiv);
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+      return msgDiv;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // Send Message
+    function handleSend() {
+      const text = promptInput.value.trim();
+      if (!text || isGenerating) return;
+
+      if (!isModelReady) {
+        alert("The model weights are downloading. Please allow it to finish.");
+        return;
+      }
+
+      chatMessages.push({ role: 'user', content: text });
+      appendMessage('user', text);
+      promptInput.value = '';
+      promptInput.style.height = 'auto';
+
+      const assistantDiv = appendMessage('assistant', '');
+      currentResponseTarget = assistantDiv.querySelector('.assistant-markdown');
+      currentLoader = assistantDiv.querySelector('.point-square-grid');
+
+      isGenerating = true;
+      sendBtn.disabled = true;
+      statusText.innerText = "Thinking...";
+
+      fullResponseAccumulator = "";
+      tokenCounter = 0;
+      generationStartTime = performance.now();
+
+      const messages = [
+        { role: "system", content: "You are Astra, an articulate and helpful AI assistant running directly on the user's local device." },
+        ...chatMessages
+      ];
+
+      worker.postMessage({
+        type: 'generate',
+        payload: {
+          messages,
+          max_new_tokens: 384,
+          temperature: 0.7
+        }
+      });
+    }
+
+    // Export Chat Conversation as Markdown
+    exportChatBtn.addEventListener('click', () => {
+      if (chatMessages.length === 0) {
+        alert("No conversation to export yet.");
+        return;
+      }
+      
+      let md = `# Astra AI Conversation\n*Exported on ${new Date().toLocaleString()}*\n\n---\n\n`;
+      chatMessages.forEach(msg => {
+        md += `### ${msg.role === 'user' ? 'User' : 'Astra'}\n\n${msg.content}\n\n`;
+      });
+
+      const blob = new Blob([md], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `astra-chat-${Date.now()}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Event Bindings
+    sendBtn.addEventListener('click', handleSend);
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    promptInput.addEventListener('input', () => {
+      promptInput.style.height = 'auto';
+      promptInput.style.height = `${Math.min(promptInput.scrollHeight, 120)}px`;
+    });
+
+    // Model Selector Dropdown Handlers
+    const modelBtn = document.getElementById('model-select-btn');
+    const modelDropdown = document.getElementById('model-dropdown');
+    modelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      modelDropdown.classList.toggle('hidden');
+    });
+
+    window.addEventListener('click', () => modelDropdown.classList.add('hidden'));
+
+    document.querySelectorAll('.model-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const id = opt.dataset.id;
+        const name = opt.dataset.name;
+        if (id === currentModelId) return;
+
+        currentModelId = id;
+        document.getElementById('current-model-name').innerText = name;
+        modelDropdown.classList.add('hidden');
+        loadModel(id);
+      });
+    });
+
+    // Mobile Sidebar Drawer
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('mobile-backdrop');
+    document.getElementById('open-sidebar-btn').addEventListener('click', () => {
+      sidebar.classList.remove('-translate-x-full');
+      backdrop.classList.remove('hidden');
+    });
+    const closeSidebar = () => {
+      sidebar.classList.add('-translate-x-full');
+      backdrop.classList.add('hidden');
+    };
+    document.getElementById('close-sidebar-btn').addEventListener('click', closeSidebar);
+    backdrop.addEventListener('click', closeSidebar);
+
+    // New Session
+    document.getElementById('new-chat-btn').addEventListener('click', () => {
+      chatMessages = [];
+      messagesContainer.innerHTML = '';
+      messagesContainer.classList.add('hidden');
+      welcomeView.classList.remove('hidden');
+      closeSidebar();
+    });
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('new-chat-btn').click();
+      }
+    });
+  </script>
+</body>
+</html>
